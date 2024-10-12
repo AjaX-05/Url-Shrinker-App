@@ -4,6 +4,7 @@ const express = require("express");
 const ejs = require("ejs");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
 
 const SignUp = require("./model/signup.model");
 const Shrinker = require("./model/shrinker.model");
@@ -15,6 +16,7 @@ const app = express();
 app.set("view engine", "ejs");
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 app.get("/", (req, res) => {
   res.render("signup");
@@ -24,7 +26,7 @@ app.get("/login", (req, res) => {
   res.render("signin");
 });
 
-app.get("/dashboard", async (req, res) => {
+app.get("/dashboard", authenticateToken, async (req, res) => {
   try {
     const shortUrls = await Shrinker.find();
     // console.log(shortUrls);
@@ -94,27 +96,47 @@ app.post("/signin", async (req, res) => {
       return res.status(404).send("SignUp to Login");
     }
 
-    const user = await bcrypt.compare(passwordRaw, userEmail.password);
+    const validPassword = await bcrypt.compare(passwordRaw, userEmail.password);
 
-    if (!user) {
+    if (!validPassword) {
       return res.sendStatus(403);
     }
 
-    //Auth
-    userEmail = { email: userEmail.email };
-    const accessToken = generateAccessToken(userEmail);
+    const user = { email: userEmail.email };
+    const accessToken = generateAccessToken(user);
 
-    const authEntry = await Auth.create({ accessToken: accessToken });
+    res.cookie("token", accessToken, { httpOnly: true, secure: true });
+    console.log("Logged in");
 
-    res.redirect("/dashboard");
+    res.render("home");
   } catch (error) {
     console.log(error.message);
     res.status(500).send("An error occured during sign up");
   }
 });
 
+app.post("/logout", (req, res) => {
+  res.clearCookie("token");
+  res.redirect("/login");
+});
+
 function generateAccessToken(user) {
   return jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: "10m" });
+}
+
+function authenticateToken(req, res, next) {
+  // const authHeader = req.headers["authorization"];
+  // const token = authHeader.split(" ")[1];
+
+  const token = req.cookies.token;
+
+  if (token == null) return res.sendStatus(401);
+
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
+    if (err) return res.sendStatus(403);
+    req.user = user;
+    next();
+  });
 }
 
 mongoose
