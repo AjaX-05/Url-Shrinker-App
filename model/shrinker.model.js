@@ -15,6 +15,10 @@ const shrinkerSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+  email: {
+    type: String,
+    required: true,
+  },
 });
 
 const Shrinker = mongoose.model("Shrinker", shrinkerSchema);

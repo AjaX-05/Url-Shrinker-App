@@ -13,8 +13,9 @@
   </head>
   <body>
     <div class="container">
+      <h4>Welcome, <%= userEmail %>!</h4>
       <form class="form-group" action="/bigUrl" method="post">
-        <h3 class="text-center">Enter URL</h3>
+        <h5 class="text-center">Enter URL</h5>
 
         <div class="form-group">
           <label for="input-url">Enter URL</label>
@@ -38,6 +39,7 @@
             <th>Full URL</th>
             <th>Shrinked URL</th>
             <th>Clicks</th>
+            <th>Remove</th>
           </tr>
         </thead>
         <tbody>
@@ -54,8 +56,20 @@
               </a>
             </td>
             <td><%= shortUrl.clicks %></td>
+            <td>
+              <!-- Trash Button -->
+              <form action="/delete/<%= shortUrl.shortUrl %>" method="post">
+                <button type="submit" class="btn btn-danger">
+                  <i class="bi bi-trash-fill"></i>
+                </button>
+              </form>
+            </td>
           </tr>
           <% }) %>
+
+          <div class="mt-5 text-center">
+            <a href="/home" class="btn btn-primary">Back to Home</a>
+          </div>
         </tbody>
       </table>
     </div>

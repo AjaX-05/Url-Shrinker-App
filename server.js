@@ -11,6 +11,7 @@ const Shrinker = require("./model/shrinker.model");
 const Auth = require("./model/authorize.model");
 
 const mongoose = require("mongoose");
+const shortid = require("shortid");
 
 const app = express();
 app.set("view engine", "ejs");
@@ -26,24 +27,32 @@ app.get("/login", (req, res) => {
   res.render("signin");
 });
 
+app.get("/home", (req, res) => {
+  res.render("home");
+});
+
 app.get("/dashboard", authenticateToken, async (req, res) => {
   try {
-    const shortUrls = await Shrinker.find();
+    const userEmail = req.user.email;
+    const shortUrls = await Shrinker.find({ email: req.user.email });
     // console.log(shortUrls);
-    res.render("userhomepage", { shortUrls: shortUrls });
+    res.render("userhomepage", { shortUrls: shortUrls, userEmail: userEmail });
   } catch (error) {
     console.log(error.message);
   }
 });
 
-app.post("/bigUrl", async (req, res) => {
+app.post("/bigUrl", authenticateToken, async (req, res) => {
   try {
     const fullurl = req.body.input_url;
-    const urlExists = await Shrinker.findOne({ fullUrl: fullurl });
-    if (urlExists) {
-      return res.redirect("/dashboard");
-    }
-    await Shrinker.create({ fullUrl: fullurl });
+    const userEmail = req.user.email;
+
+    const urlExists = await Shrinker.findOne({
+      fullUrl: fullurl,
+    });
+
+    console.log(userEmail);
+    await Shrinker.create({ fullUrl: fullurl, email: userEmail });
     return res.redirect("/dashboard");
   } catch (error) {
     console.log(error.message);
@@ -113,6 +122,13 @@ app.post("/signin", async (req, res) => {
     console.log(error.message);
     res.status(500).send("An error occured during sign up");
   }
+});
+
+app.post("/delete/:shortUrl", async (req, res) => {
+  shortUrl = req.params.shortUrl;
+  const deleted = await Shrinker.deleteOne({ shortUrl: shortUrl });
+  console.log(`Deleted: ${shortUrl}`);
+  res.redirect("/dashboard");
 });
 
 app.post("/logout", (req, res) => {
